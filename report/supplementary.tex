@@ -1,0 +1,298 @@
+\documentclass[10pt,a4paper,twocolumn]{article}
+
+\newcommand{\projecttitle}{Supplementary material for ``Is the closing-auction imbalance already in the price?''
+}
+
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \IfFileExists{carlito.sty}%
+    {\usepackage[sfdefault]{carlito}}%
+    {\usepackage[scaled=0.92]{helvet}\renewcommand{\familydefault}{\sfdefault}}%
+  \usepackage{courier}
+\else
+  \usepackage[no-math]{fontspec}
+  \setmainfont{Carlito}[Extension=.ttf, UprightFont=*-Regular, BoldFont=*-Bold,
+    ItalicFont=*-Italic, BoldItalicFont=*-BoldItalic]
+\fi
+
+\usepackage[margin=18mm,bottom=20mm,columnsep=7mm]{geometry}
+\usepackage{amsmath}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{needspace}
+\usepackage[font=small,labelfont=bf]{caption}
+\usepackage[hidelinks]{hyperref}
+\hypersetup{pdftitle={\projecttitle},
+            pdfsubject={CSE558 Data Science, Monsoon 2026: Midterm Project Report}}
+
+\titleformat{\section}{\normalfont\large\bfseries}{\thesection.}{0.5em}{}
+\titlespacing*{\section}{0pt}{12pt}{3pt}
+\titleformat{\subsection}{\normalfont\normalsize\bfseries}{\thesubsection}{0.5em}{}
+\titlespacing*{\subsection}{0pt}{10pt}{2pt}
+\newcommand{\sectionbreak}{\needspace{10\baselineskip}}
+\newcommand{\subsectionbreak}{\needspace{10\baselineskip}}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+\setlist{leftmargin=1.2em, itemsep=2pt, topsep=2pt, parsep=0pt}
+\renewcommand{\arraystretch}{1.25}
+\setlength{\tabcolsep}{4pt}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{K}[1]{>{\raggedright\arraybackslash\bfseries\boldmath}p{#1}}
+
+\newcommand{\field}[2]{\textbf{#1}~#2\par}
+\newcommand{\tpart}[2]{\par\needspace{12\baselineskip}\smallskip\textbf{#1)~#2}\par}
+\newcommand{\minihead}[1]{\par\needspace{8\baselineskip}\smallskip\textbf{#1}\par}
+\newcommand{\code}[1]{\texttt{#1}}
+
+\graphicspath{{../figures/}}
+\input{../results/numbers.tex}
+
+\begin{document}
+
+\twocolumn[%
+{\small\bfseries CSE558 Data Science\ \ \textbullet\ \ Midterm Project Report\ \ \textbullet\ \ Supplementary material\par}
+\vspace{4pt}
+{\LARGE\bfseries\raggedright\projecttitle\par}
+\vspace{6pt}
+\rule{\linewidth}{1pt}
+{\small This supplement adds the figures and tables behind every check in the main report. Every number is generated
+by the same code run as the main report. Section numbers here are prefixed with S.\par}
+\vspace{10pt}
+]
+
+\renewcommand{\thesection}{S\arabic{section}}
+\renewcommand{\thefigure}{S\arabic{figure}}
+\renewcommand{\thetable}{S\arabic{table}}
+
+\section{Data processing}
+
+\minihead{The hidden index}
+The target is a stock's 60\,s WAP return minus an index's 60\,s return, and the index is not given. At every
+timestamp the implied index return (stock return minus target) is the same for all stocks to within \nIndexResidSd{}
+bps, so it is one series. Regressing it on the 200 stock returns recovers positive weights that sum to
+\nIndexWeightSum{} and leave unexplained variance \nIndexUnexplained. The weights come in a few discrete tiers
+(Figure~\ref{fig:sweights}), the largest at \nIndexWeightMax.
+
+\begin{figure}[!ht]
+  \includegraphics[width=\linewidth]{figS_index_weights}
+  \caption{The hidden index is a tiered weighted average of the 200 stocks. Bars are the recovered weights, largest
+  first.}
+  \label{fig:sweights}
+\end{figure}
+
+\begin{figure*}[!t]
+  \includegraphics[width=\linewidth]{figS_coverage}
+  \caption{Panel coverage: each row is a stock, each column a trading day, and blue marks a stock-day with no data.
+  \nStockDaysMissing{} of 96{,}200 stock-days are absent, almost all from \nStocksWithGaps{} stocks that join the
+  panel late; one stock is missing for \nMaxMissingDays{} days. Every comparison in the report is made within a day.}
+  \label{fig:scoverage}
+\end{figure*}
+
+\minihead{Streaming summary}
+A Count-Min sketch with \nCmDepth{} rows of \nCmWidth{} counters ($\varepsilon=0.001$, $\delta=0.01$, universal
+hashing modulo the prime $2^{31}-1$) totalled the imbalance shares of \nCmItems{} stock-days in one pass. It uses
+\nCmCounters{} counters, \nCmMemory{} of exact counting. The guarantee says each estimate exceeds the truth by at most
+$\varepsilon N$ with probability at least $1-\delta$; here \nCmWithin{} of estimates do, the worst at \nCmMaxShare{} of
+the bound (Figure~\ref{fig:scm}).
+
+\begin{figure}[!ht]
+  \includegraphics[width=\linewidth]{figS_countmin}
+  \caption{Every Count-Min estimate stays inside its guarantee. The curve is the cumulative share of stock-days whose
+  overestimate is below a given fraction of $\varepsilon N$.}
+  \label{fig:scm}
+\end{figure}
+
+\section{Distributions}
+
+\begin{figure}[!ht]
+  \includegraphics[width=\linewidth]{figS_tfit}
+  \caption{A Student $t$ with \nTFitDf{} degrees of freedom fits the tails that a normal misses. Both curves are
+  maximum-likelihood fits to the minute snapshots; grey is the histogram.}
+  \label{fig:stfit}
+\end{figure}
+
+The $t$ fit raises the log-likelihood by \nTFitGain{} per row and cuts the 20-bin $\chi^2$ goodness-of-fit statistic
+from \nNormChi{} to \nTFitChi. With fewer than four degrees of freedom the fourth moment is infinite, which is why the
+sample kurtosis (\nTargetKurt) is unstable and why our tests rely on day averages.
+
+\begin{figure}[!ht]
+  \includegraphics[width=\linewidth]{figS_flips}
+  \caption{Auctions either hold one side all along or churn: far more stock-days have no side change, and more have
+  many, than a Poisson count with the same mean allows.}
+  \label{fig:sflips}
+\end{figure}
+
+A stock changes imbalance side \nFlipMean{} times per auction on average, with variance \nFlipVar. A Poisson has
+variance equal to its mean, so the dispersion of \nFlipDispersion{} rejects it ($\chi^2=\nFlipChi$ on \nFlipDf{}
+d.f.).
+
+\section{P2: learned models}
+
+{\footnotesize
+\begin{tabularx}{\linewidth}{@{}L{1.7cm} Y@{}}
+\toprule
+\textbf{Setting} & \textbf{Value, fixed before training} \\
+\midrule
+Split & train days 0 to 240 (\nSixTrainRows{} rows), early stopping on 241 to 300, test on 301 to 480 \\
+Features & signed imbalance, $|$imbalance$|$/matched, side, log matched size, spread, near and far gaps with
+missing flags, reference-to-WAP gap, depth imbalance, time, phase, WAP returns over 10, 30, 60\,s, imbalance changes
+over 10, 60\,s; no stock identity \\
+MLP & 128 and 64 ReLU units, dropout 0.1, Adam at $10^{-3}$, batch 4{,}096, MSE on the winsorised target, early
+stopping on validation IC \\
+LightGBM & 63 leaves, learning rate 0.05, early stopping after 100 rounds \\
+GRU & one layer of 64 units over the auction so far, snapshot features only \\
+Seeds & 5 per model; predictions averaged \\
+\bottomrule
+\end{tabularx}}
+
+{\footnotesize
+\begin{tabularx}{\linewidth}{@{}L{3.3cm} Y@{}}
+\toprule
+\textbf{Comparison (held-out days)} & \textbf{Estimate (95\% CI)} \\
+\midrule
+MLP minus imbalance, WAP target & $+\nSixEst$ (\nSixCi) \\
+LightGBM minus imbalance & $+\nLgbmGain$ (\nLgbmGainCi) \\
+MLP minus LightGBM & \nMlpLgbm{} (\nMlpLgbmCi) \\
+GRU minus snapshot-only MLP & $+\nGruGain$ (\nGruGainCi) \\
+MLP minus imbalance, mid target & \nMidGain{} (\nMidGainCi) \\
+Diebold-Mariano, MLP vs zero & $t=\nDmZeroT$ \\
+Diebold-Mariano, MLP vs linear & $t=\nDmLinT$ \\
+Seed SD of mean IC (MLP, LGBM, GRU) & \nSeedSdMlp, \nSeedSdLgbm, \nSeedSdGru \\
+\bottomrule
+\end{tabularx}}
+
+The GRU's gain over the snapshot-only MLP says the path of the auction carries information beyond its current state,
+on the WAP target. Seed-to-seed variation is two orders of magnitude below every gain (Figure~\ref{fig:sseeds}), so
+none of these differences is training noise.
+
+\begin{figure}[!ht]
+  \includegraphics[width=\linewidth]{figS_seeds}
+  \caption{Five seeds per model agree almost exactly, far above the imbalance alone on the WAP target.}
+  \label{fig:sseeds}
+\end{figure}
+
+\begin{figure}[!ht]
+  \includegraphics[width=\linewidth]{figS_importance}
+  \caption{The models lean on book depth and the spread, the inputs that move the WAP mechanically, more than on the
+  imbalance (\nImpImbShare{} of split gain).}
+  \label{fig:simportance}
+\end{figure}
+
+\section{P3: placebo, subgroups and the classifier test}
+
+\begin{figure}[!ht]
+  \includegraphics[width=\linewidth]{figS_placebo}
+  \caption{The jump at 15:55 is real but not unique: the last minute jumps more. Each line is the change in IC from
+  the previous minute, with a 95\% interval over days.}
+  \label{fig:splacebo}
+\end{figure}
+
+\begin{figure}[!ht]
+  \includegraphics[width=\linewidth]{figS_robustness}
+  \caption{The post-15:55 rise holds in every subgroup fixed in advance. Dashed line: the 0.02 threshold.}
+  \label{fig:srob}
+\end{figure}
+
+{\footnotesize
+\begin{tabularx}{\linewidth}{@{}L{2.6cm} L{0.9cm} L{0.9cm} Y@{}}
+\toprule
+\textbf{Subgroup} & \textbf{IC pre} & \textbf{IC post} & \textbf{$\Delta$IC (95\% CI)} \\
+\midrule
+\nRobRows
+\bottomrule
+\end{tabularx}}
+
+\begin{figure}[!ht]
+  \includegraphics[width=\linewidth]{fig_daily_ic}
+  \caption{Day by day, the imbalance predicts better after 15:55 on \nThreeSignDays{} of \nDays{} days.}
+  \label{fig:sdaily}
+\end{figure}
+
+\minihead{Classifier two-sample test}
+If the auction state did not change at 15:55, no classifier could tell pre from post snapshots better than chance.
+LightGBM, trained without the features that are missing by rule, is right on \nCtAcc{} of \nCtN{} held-out snapshots
+($z=\nCtZ$; day-level 95\% CI \nCtDayCi\%). This is the lecture 6 one-proportion z-test applied to a learned
+classifier's accuracy.
+
+\section{P4: edge, cost and the learned rule}
+
+\begin{figure}[!ht]
+  \includegraphics[width=\linewidth]{figS_edge_strength}
+  \caption{Stronger imbalances earn more, but their stocks quote wider spreads, so the edge never catches the cost.
+  Solid: gross edge by strength decile; dashed: the same stocks' half-spread.}
+  \label{fig:sstrength}
+\end{figure}
+
+{\footnotesize
+\begin{tabularx}{\linewidth}{@{}L{3.3cm} Y@{}}
+\toprule
+\textbf{Rule (held-out days)} & \textbf{Net bps per trade (95\% CI)} \\
+\midrule
+MLP signal above half-spread, WAP target & $+\nSelNet$ (\nSelNetCi), hit rate \nSelHit \\
+Same rule, mid-price target & \nSelMidNet{} (\nSelMidNetCi), hit rate \nSelMidHit \\
+Imbalance, 15:59 snapshot only & $+\nFinalNet$ (\nFinalNetCi) \\
+\quad first half of days & $+\nFinalFirst$ \\
+\quad second half of days & $+\nFinalSecond$ (\nFinalSecondCi) \\
+\bottomrule
+\end{tabularx}}
+
+\section{Power}
+
+{\footnotesize
+\begin{tabularx}{\linewidth}{@{}L{1.0cm} L{2.4cm} L{1.4cm} Y@{}}
+\toprule
+\textbf{Test} & \textbf{Detectable at 80\%} & \textbf{Threshold} & \textbf{Days needed at threshold} \\
+\midrule
+Test 1 & \nMdeOne{} bps & \nThrOne{} bps & \nDaysOne \\
+Test 4 & \nMdeThree{} IC & \nThrThree{} IC & \nDaysThree \\
+Test 5 & \nMdeFour{} log ratio & \nThrFour & \nDaysFour \\
+Test 6 & \nMdeFive{} hit rate & \nThrFive & \nDaysFive \\
+\bottomrule
+\end{tabularx}}
+
+\begin{figure}[!ht]
+  \includegraphics[width=\linewidth]{figS_power}
+  \caption{With 481 days, power reaches 80\% (dashed) at effects far below our thresholds. Left: Test 1; right:
+  Test 4. The vertical line marks the detectable effect.}
+  \label{fig:spower}
+\end{figure}
+
+\section{Pre-registration record}
+
+Every threshold was written down, with a date, before the analysis it governs was run. Changes made before any test
+ran, and results that missed their pre-set criterion, are listed here.
+
+{\footnotesize
+\begin{tabularx}{\linewidth}{@{}L{1.4cm} Y@{}}
+\toprule
+\textbf{When} & \textbf{What was fixed or changed} \\
+\midrule
+Before tests & sampling at whole minutes; the SDM as the median half-spread; Tests 1, 2, 4, 5, 6 with their
+thresholds \\
+Before tests & a far-price fence changed from Tukey (flags 26\%) to Chebyshev (flags \nFarOutliers{} rows); a
+cleaning step dropped as a profiling artefact \\
+Before checks & subgroups, placebo, power, cost, permutation, fits and sketch criteria \\
+Before training & Test 3 design, models, split and checks \\
+Before 5 seeds & the mid-price check, added after a one-seed run whose numbers are not reported \\
+\midrule
+Miss & Test 4: we predicted IC would fall after 15:55; it rose \\
+Miss & Placebo: 15:55 is not the largest jump \\
+Rule fired & Test 3: most of the learned gain is WAP mechanics \\
+\bottomrule
+\end{tabularx}}
+
+\section{Reproduction}
+One command, \code{python run\_all.py}, rebuilds every number and figure in both documents from the raw
+\code{train.csv} in about seven minutes on a laptop with a consumer GPU. Every number in the text is a macro written
+by the code; none is typed by hand.
+
+\end{document}
